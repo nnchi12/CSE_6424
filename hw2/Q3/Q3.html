@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+
+<head>
+  <title>Line Charts</title>
+  <style>
+    #signature {
+        position: absolute;
+        bottom: -1720px;
+        right: 250px;
+    }
+  </style>
+
+  <meta charset="utf-8">
+  <script type="text/javascript" src="../lib/d3.v5.min.js"></script>
+</head>
+
+<body>
+      <script>
+
+      // Use the margin convention practice
+      var margin = {
+          top: 50,
+          right: 200,
+          bottom: 50,
+          left: 100
+      };
+
+      var width = 960; // Use the window's width
+      var height = 500; // Use the window's height
+
+
+      // Q3 PART a
+      var svg = d3.select("body").append("svg")
+          .attr("id", "svg-a")
+          .attr("width", width + margin.left + margin.right)
+          .attr("height", height + margin.top + margin.bottom)
+          .append("g")
+          .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      //Read the data
+      var timeConv = d3.timeParse("%Y-%m-%d");
+      var dataset = d3.dsv(",", "boardgame_ratings.csv");
+      dataset.then(function(data) {
+          var slices = data.columns.slice(1).map(function(id) {
+              return {
+                  id: id,
+                  values: data.map(function(d){
+                      return {
+                          date: timeConv(d.date),
+                          measurement: +d[id]
+                      };
+                  })
+              };
+          });
+          console.log(data);
+
+
+          // Define x scale : date, y scale : values
+          var xScale = d3.scaleTime().range([0, width]);
+          var yScale = d3.scaleLinear().range([height, 0]);
+
+          // Set the x scale: time domain from 2016/11 to 2020/08
+          xScale.domain(d3.extent(data, function(d){
+              return timeConv(d.date)}));
+
+          // Set the y scale: measurement domain based on values
+          var maxValue = d3.max(slices, function(c) {
+              return d3.max(c.values, function(d) {
+                  return d.measurement;
+              });
+          }) + 4;
+
+          yScale.domain([0, maxValue])
+
+          // Define x & y axis
+          var xAxis = d3.axisBottom()
+              .ticks(d3.timeMonth.every(3))
+              .tickFormat(d3.timeFormat('%b %y'))
+              .scale(xScale);
+
+          var yAxis = d3.axisLeft()
+              .tickValues(d3.range(0, maxValue + 1, 10000))
+              .scale(yScale);
+
+
+          // Define lines
+          var line = d3.line()
+              .x(function(d) { return xScale(d.date); })
+              .y(function(d) { return yScale(d.measurement); });
+
+          let id = 0;
+          var ids = function () {
+              return "line-"+id++;
+          }
+
+          // Drawing
+          svg.append("text")
+              .attr("id", "title-a")
+              .attr("x", (width / 2))
+              .attr("y", -margin.top / 4)
+              .attr("text-anchor", "middle")
+              .style("font-size", "24px")
+              .text("Number of Ratings 2016-2020");
+
+          var plot = svg.append("g")
+                        .attr("id","plot-a")
+
+          var container = plot.append("g")
+              .attr("id", "lines-a")
+
+          // construct line and labels and add to plot
+          var labels = ['Catan', 'Dominion', 'Codenames', 'Terraforming Mars',
+            'Gloomhaven', 'Magic: The Gathering', 'Dixit', 'Monopoly'];
+          var color = d3.scaleOrdinal(d3.schemeCategory10);
+
+          var lines = container.selectAll("lines")
+              .data(slices)
+              .enter().append("g")
+              .filter(function (d) {
+              // Filter to keep only odd-indexed elements
+                return d.id.includes("=count");
+              });
+
+          lines.append("path")
+              .attr("class", ids)
+              .attr("d", function(d) { return line(d.values); })
+              .style("stroke", function (d, i) {
+              // Assign color based on index or label
+              return color(labels[i]);
+              })
+              .style("fill", "none");
+
+
+          lines.append("text")
+                .attr("class","serie_label")
+                .datum(function(d) {
+                    return {
+                        id: d.id,
+                        value: d.values[d.values.length-1]}; })
+                .attr("transform", function(d) {
+                        return "translate(" + (xScale(d.value.date))
+                        + "," + (yScale(d.value.measurement) + 5 )+ ")"; })
+                .style("fill", function (d, i) {
+                // Assign color based on index or label
+                return color(labels[i]);
+                })
+                .text(function(d, i) { return labels[i];}
+                );
+
+              //
+          var x_axis = plot.append("g")
+                .attr("id", "x-axis-a")
+                .attr("transform", "translate(0," + height + ")")
+                .call(xAxis);
+
+              x_axis.append("text")
+                .attr("x", (width / 2))
+                .attr("y", height + 50)
+                .style("text-anchor", "middle")
+                .style("font-size", "18px")
+                .text("Month");
+
+          var y_axis = plot.append("g")
+                .attr("id", "y-axis-a")
+                .call(yAxis);
+
+              y_axis.append("text")
+                // .attr("id", "y-axis label")
+                .attr("transform", "rotate(-90)")
+                .attr("y", -50)
+                .attr("x", -height / 2)
+                .style("text-anchor", "middle")
+                .style("font-size", "18px")
+                .text("Num of Ratings");
+      });
+
+
+      // Q3 PART b
+      var svg_b = d3.select("body").append("svg")
+          .attr("id", "svg-b")
+          .attr("width", width + margin.left + margin.right)
+          .attr("height", height + margin.top + margin.bottom)
+          .append("g")
+          .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      //Read the data
+      var timeConv = d3.timeParse("%Y-%m-%d");
+      var dataset = d3.dsv(",", "boardgame_ratings.csv");
+      dataset.then(function(data) {
+          var slices = data.columns.slice(1).map(function(id) {
+              return {
+                  id: id,
+                  values: data.map(function(d){
+                      return {
+                          date: timeConv(d.date),
+                          measurement: +d[id]
+                      };
+                  })
+              };
+          });
+          console.log(data);
+
+
+          // Define x scale : date, y scale : values
+          var xScale = d3.scaleTime().range([0, width]);
+          var yScale = d3.scaleLinear().range([height, 0]);
+
+          // Set the x scale: time domain from 2016/11 to 2020/08
+          xScale.domain(d3.extent(data, function(d){
+              return timeConv(d.date)}));
+
+          // Set the y scale: measurement domain based on values
+          var maxValue = d3.max(slices, function(c) {
+              return d3.max(c.values, function(d) {
+                  return d.measurement;
+              });
+          }) + 4;
+
+          yScale.domain([0, maxValue])
+
+          // Define x & y axis
+          var xAxis = d3.axisBottom()
+              .ticks(d3.timeMonth.every(3))
+              .tickFormat(d3.timeFormat('%b %y'))
+              .scale(xScale);
+
+          var yAxis = d3.axisLeft()
+              .tickValues(d3.range(0, maxValue + 1, 10000))
+              .scale(yScale);
+
+
+          // Define lines
+          var line = d3.line()
+              .x(function(d) { return xScale(d.date); })
+              .y(function(d) { return yScale(d.measurement); });
+
+          let id = 0;
+          var ids = function () {
+              return "line-"+id++;
+          }
+
+          // Drawing
+          svg_b.append("text")
+              .attr("id", "title-a")
+              .attr("x", (width / 2))
+              .attr("y", -margin.top / 4)
+              .attr("text-anchor", "middle")
+              .style("font-size", "24px")
+              .text("Number of Ratings 2016-2020 with Rankings");
+
+          var plot = svg_b.append("g")
+                        .attr("id","plot-b")
+
+          var container = plot.append("g")
+              .attr("id", "lines-b")
+
+          // construct line and labels and add to plot
+          var labels = ['Catan', 'Dominion', 'Codenames', 'Terraforming Mars',
+            'Gloomhaven', 'Magic: The Gathering', 'Dixit', 'Monopoly'];
+          var color = d3.scaleOrdinal(d3.schemeCategory10);
+
+          var lines = container.selectAll("lines")
+              .data(slices)
+              .enter().append("g")
+              .filter(function (d) {
+              // Filter to keep only odd-indexed elements
+                return d.id.includes("=count");
+              });
+
+          lines.append("path")
+              .attr("class", ids)
+              .attr("d", function(d) { return line(d.values); })
+              .style("stroke", function (d, i) {
+              // Assign color based on index or label
+              return color(labels[i]);
+              })
+              .style("fill", "none");
+
+
+          lines.append("text")
+                .attr("class","serie_label")
+                .datum(function(d) {
+                    return {
+                        id: d.id,
+                        value: d.values[d.values.length-1]}; })
+                .attr("transform", function(d) {
+                        return "translate(" + (xScale(d.value.date))
+                        + "," + (yScale(d.value.measurement) + 5 )+ ")"; })
+                .style("fill", function (d, i) {
+                // Assign color based on index or label
+                return color(labels[i]);
+                })
+                .text(function(d, i) { return labels[i]; }
+                );
+
+              //
+          var x_axis = plot.append("g")
+                .attr("id", "x-axis-b")
+                .attr("transform", "translate(0," + height + ")")
+                .call(xAxis);
+
+              x_axis.append("text")
+                .attr("x", (width / 2))
+                .attr("y", height + 50)
+                .style("text-anchor", "middle")
+                .style("font-size", "18px")
+                .text("Month");
+
+          var y_axis = plot.append("g")
+                .attr("id", "y-axis-b")
+                .call(yAxis);
+
+              y_axis.append("text")
+                // .attr("id", "y-axis label")
+                .attr("transform", "rotate(-90)")
+                .attr("y", -50)
+                .attr("x", -height / 2)
+                .style("text-anchor", "middle")
+                .style("font-size", "18px")
+                .text("Num of Ratings");
+
+
+
+          // construct symbols (circles) and labels and add to plot
+          var rankings = ['Catan=rank', 'Codenames=rank', 'Terraforming Mars=rank', 'Gloomhaven=rank'];
+
+          var symbols = plot.append("g")
+              .attr("id", "symbols-b")
+
+          var circles = symbols.selectAll("dot")
+              .data(slices)
+              .enter()
+              .append("g")
+              .filter(function (d) {
+                  const colname = d.id;
+                  return colname === 'Catan=count' || colname === 'Codenames=count' || colname === 'Terraforming Mars=count' || colname === 'Gloomhaven=count';
+              });
+
+              // Append circles to the data points
+              circles.selectAll("circle")
+                  .data(function (d) {
+                      // Filter and extract data points every 3 months
+                      var dataPoints = d.values.filter(function (value) {
+                          // Modify based on x-axis tick interval
+                          return value.date >= new Date(2017, 0, 1) && value.date.getMonth() % 3 === 0;
+                      });
+                      return dataPoints;
+                  })
+                  .enter()
+                  .append("circle")
+                  .attr("cx", function (d) { return xScale(d.date); })
+                  .attr("cy", function (d) { return yScale(d.measurement);} )
+                  .attr("r", 8) // Adjust the radius as needed
+                  .style("fill", function (d, i) {
+                      return color(labels[i]);
+                  });
+
+
+          //   Adding Legend
+          var legend = svg_b.append("g")
+                .attr("id", "legend_b")
+                .attr("transform", "translate(" + (width + 90) + "," + (height - 20) + ")");
+          legend.append("circle")
+                  .attr("r", 15)
+                  .style("fill", "black")
+          legend.append("text")
+                  .attr("x", 0)
+                  .attr("y", 4)
+                  .style("fill", "white")
+                  .style("text-anchor", "middle")
+                  .style("font-size", "12px")
+                  .text("rank");
+          legend.append("text")
+                  .attr("x", 0)
+                  .attr("y", 30)
+                  .style("fill", "black")
+                  .style("font-size", "16px")
+                  .style("text-anchor", "middle")
+                  .text("BoardGameGeek Rank");
+
+      });
+
+
+
+      // Q3 PART c-1
+      var svg_c1 = d3.select("body").append("svg")
+          .attr("id", "svg-c-1")
+          .attr("width", width + margin.left + margin.right)
+          .attr("height", height + margin.top + margin.bottom)
+          .append("g")
+          .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      //Read the data
+      var timeConv = d3.timeParse("%Y-%m-%d");
+      var dataset = d3.dsv(",", "boardgame_ratings.csv");
+      dataset.then(function(data) {
+          var slices = data.columns.slice(1).map(function(id) {
+              return {
+                  id: id,
+                  values: data.map(function(d){
+                      return {
+                          date: timeConv(d.date),
+                          measurement: +d[id]
+                      };
+                  })
+              };
+          });
+          console.log(data);
+
+
+          // Define x scale : date, y scale : values
+          var xScale = d3.scaleTime().range([0, width]);
+          var yScale = d3.scaleSqrt().range([height, 0]);
+
+          // Set the x scale: time domain from 2016/11 to 2020/08
+          xScale.domain(d3.extent(data, function(d){
+              return timeConv(d.date)}));
+
+          // Set the y scale: measurement domain based on values
+          var maxValue = d3.max(slices, function(c) {
+              return d3.max(c.values, function(d) {
+                  return d.measurement;
+              });
+          }) + 4;
+
+          yScale.domain([0, maxValue])
+
+          // Define x & y axis
+          var xAxis = d3.axisBottom()
+              .ticks(d3.timeMonth.every(3))
+              .tickFormat(d3.timeFormat('%b %y'))
+              .scale(xScale);
+
+          var yAxis = d3.axisLeft()
+              .tickValues(d3.range(0, maxValue + 1, 10000))
+              .scale(yScale);
+
+
+          // Define lines
+          var line = d3.line()
+              .x(function(d) { return xScale(d.date); })
+              .y(function(d) { return yScale(d.measurement); });
+
+          let id = 0;
+          var ids = function () {
+              return "line-"+id++;
+          }
+
+          // Drawing
+          svg_c1.append("text")
+              .attr("id", "title-c-1")
+              .attr("x", (width / 2))
+              .attr("y", -margin.top / 4)
+              .attr("text-anchor", "middle")
+              .style("font-size", "24px")
+              .text("Number of Ratings 2016-2020 (Square root Scale)");
+
+          var plot = svg_c1.append("g")
+                        .attr("id","plot-c-1")
+
+          var container = plot.append("g")
+              .attr("id", "lines-c-1")
+
+          // construct line and labels and add to plot
+          var labels = ['Catan', 'Dominion', 'Codenames', 'Terraforming Mars',
+            'Gloomhaven', 'Magic: The Gathering', 'Dixit', 'Monopoly'];
+          var color = d3.scaleOrdinal(d3.schemeCategory10);
+
+          var lines = container.selectAll("lines")
+              .data(slices)
+              .enter().append("g")
+              .filter(function (d) {
+              // Filter to keep only odd-indexed elements
+                return d.id.includes("=count");
+              });
+
+          lines.append("path")
+              .attr("class", ids)
+              .attr("d", function(d) { return line(d.values); })
+              .style("stroke", function (d, i) {
+              // Assign color based on index or label
+              return color(labels[i]);
+              })
+              .style("fill", "none");
+
+
+          lines.append("text")
+                .attr("class","serie_label")
+                .datum(function(d) {
+                    return {
+                        id: d.id,
+                        value: d.values[d.values.length-1]}; })
+                .attr("transform", function(d) {
+                        return "translate(" + (xScale(d.value.date))
+                        + "," + (yScale(d.value.measurement) + 5 )+ ")"; })
+                .style("fill", function (d, i) {
+                // Assign color based on index or label
+                return color(labels[i]);
+                })
+                .text(function(d, i) { return labels[i]; }
+                );
+
+              //
+          var x_axis = plot.append("g")
+                .attr("id", "x-axis-c-1")
+                .attr("transform", "translate(0," + height + ")")
+                .call(xAxis);
+
+              x_axis.append("text")
+                .attr("x", (width / 2))
+                .attr("y", height + 50)
+                .style("text-anchor", "middle")
+                .style("font-size", "18px")
+                .text("Month");
+
+          var y_axis = plot.append("g")
+                .attr("id", "y-axis-c-1")
+                .call(yAxis);
+
+              y_axis.append("text")
+                // .attr("id", "y-axis label")
+                .attr("transform", "rotate(-90)")
+                .attr("y", -50)
+                .attr("x", -height / 2)
+                .style("text-anchor", "middle")
+                .style("font-size", "18px")
+                .text("Num of Ratings");
+
+
+
+          // construct symbols (circles) and labels and add to plot
+          var rankings = ['Catan=rank', 'Codenames=rank', 'Terraforming Mars=rank', 'Gloomhaven=rank'];
+
+          var symbols = plot.append("g")
+              .attr("id", "symbols-c-1")
+
+          var circles = symbols.selectAll("dot")
+              .data(slices)
+              .enter()
+              .append("g")
+              .filter(function (d) {
+                  const colname = d.id;
+                  return colname === 'Catan=count' || colname === 'Codenames=count' || colname === 'Terraforming Mars=count' || colname === 'Gloomhaven=count';
+              });
+
+              // Append circles to the data points
+              circles.selectAll("circle")
+                  .data(function (d) {
+                      // Filter and extract data points every 3 months
+                      var dataPoints = d.values.filter(function (value) {
+                          // Modify based on x-axis tick interval
+                          return value.date >= new Date(2017, 0, 1) && value.date.getMonth() % 3 === 0;
+                      });
+                      return dataPoints;
+                  })
+                  .enter()
+                  .append("circle")
+                  .attr("cx", function (d) { return xScale(d.date); })
+                  .attr("cy", function (d) { return yScale(d.measurement);} )
+                  .attr("r", 8) // Adjust the radius as needed
+                  .style("fill", function (d, i) {
+                      return color(labels[i]);
+                  });
+
+
+          //   Adding Legend
+          var legend = svg_c1.append("g")
+                .attr("id", "legend_c-1")
+                .attr("transform", "translate(" + (width + 90) + "," + (height - 20) + ")");
+          legend.append("circle")
+                  .attr("r", 15)
+                  .style("fill", "black")
+          legend.append("text")
+                  .attr("x", 0)
+                  .attr("y", 4)
+                  .style("fill", "white")
+                  .style("text-anchor", "middle")
+                  .style("font-size", "12px")
+                  .text("rank");
+          legend.append("text")
+                  .attr("x", 0)
+                  .attr("y", 30)
+                  .style("fill", "black")
+                  .style("font-size", "16px")
+                  .style("text-anchor", "middle")
+                  .text("BoardGameGeek Rank");
+
+      });
+
+
+      // Q3 PART c-2
+      var svg_c2 = d3.select("body").append("svg")
+          .attr("id", "svg-c-2")
+          .attr("width", width + margin.left + margin.right)
+          .attr("height", height + margin.top + margin.bottom)
+          .append("g")
+          .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      //Read the data
+      var timeConv = d3.timeParse("%Y-%m-%d");
+      var dataset = d3.dsv(",", "boardgame_ratings.csv");
+      dataset.then(function(data) {
+          var slices = data.columns.slice(1).map(function(id) {
+              return {
+                  id: id,
+                  values: data.map(function(d){
+                      return {
+                          date: timeConv(d.date),
+                          measurement: +d[id]
+                      };
+                  })
+              };
+          });
+          console.log(data);
+
+
+          // Define x scale : date, y scale : values
+          var xScale = d3.scaleTime().range([0, width]);
+          var yScale = d3.scaleLog().range([height, 0]);
+
+          // Set the x scale: time domain from 2016/11 to 2020/08
+          xScale.domain(d3.extent(data, function(d){
+              return timeConv(d.date)}));
+
+          // Set the y scale: measurement domain based on values
+          var maxValue = d3.max(slices, function(c) {
+              return d3.max(c.values, function(d) {
+                  return d.measurement;
+              });
+          }) + 4;
+
+          yScale.domain([1, maxValue])
+
+          // Define x & y axis
+          var xAxis = d3.axisBottom()
+              .ticks(d3.timeMonth.every(3))
+              .tickFormat(d3.timeFormat('%b %y'))
+              .scale(xScale);
+
+          var yAxis = d3.axisLeft()
+              .tickValues(d3.range(0, maxValue + 1, 10000))
+              .scale(yScale);
+
+
+          // Define lines
+          var line = d3.line()
+              .x(function(d) { return xScale(d.date); })
+              .y(function(d) { return yScale(d.measurement); });
+
+          let id = 0;
+          var ids = function () {
+              return "line-"+id++;
+          }
+
+          // Drawing
+          svg_c2.append("text")
+              .attr("id", "title-c-2")
+              .attr("x", (width / 2))
+              .attr("y", -margin.top / 4)
+              .attr("text-anchor", "middle")
+              .style("font-size", "24px")
+              .text("Number of Ratings 2016-2020 (Log Scale)");
+
+          var plot = svg_c2.append("g")
+                        .attr("id","plot-c-2")
+
+          var container = plot.append("g")
+              .attr("id", "lines-c-2")
+
+          // construct line and labels and add to plot
+          var labels = ['Catan', 'Dominion', 'Codenames', 'Terraforming Mars',
+            'Gloomhaven', 'Magic: The Gathering', 'Dixit', 'Monopoly'];
+          var color = d3.scaleOrdinal(d3.schemeCategory10);
+
+          var lines = container.selectAll("lines")
+              .data(slices)
+              .enter().append("g")
+              .filter(function (d) {
+              // Filter to keep only odd-indexed elements
+                return d.id.includes("=count");
+              });
+
+          lines.append("path")
+              .attr("class", ids)
+              .attr("d", function(d) { return line(d.values); })
+              .style("stroke", function (d, i) {
+              // Assign color based on index or label
+              return color(labels[i]);
+              })
+              .style("fill", "none");
+
+
+          lines.append("text")
+                .attr("class","serie_label")
+                .datum(function(d) {
+                    return {
+                        id: d.id,
+                        value: d.values[d.values.length-1]}; })
+                .attr("transform", function(d) {
+                        return "translate(" + (xScale(d.value.date))
+                        + "," + (yScale(d.value.measurement) + 5 )+ ")"; })
+                .style("fill", function (d, i) {
+                // Assign color based on index or label
+                return color(labels[i]);
+                })
+                .text(function(d, i) { return labels[i]; }
+                );
+
+              //
+          var x_axis = plot.append("g")
+                .attr("id", "x-axis-c-2")
+                .attr("transform", "translate(0," + height + ")")
+                .call(xAxis);
+
+              x_axis.append("text")
+                .attr("x", (width / 2))
+                .attr("y", height + 50)
+                .style("text-anchor", "middle")
+                .style("font-size", "18px")
+                .text("Month");
+
+          var y_axis = plot.append("g")
+                .attr("id", "y-axis-c-2")
+                .call(yAxis);
+
+              y_axis.append("text")
+                // .attr("id", "y-axis label")
+                .attr("transform", "rotate(-90)")
+                .attr("y", -50)
+                .attr("x", -height / 2)
+                .style("text-anchor", "middle")
+                .style("font-size", "18px")
+                .text("Num of Ratings");
+
+
+
+          // construct symbols (circles) and labels and add to plot
+          var rankings = ['Catan=rank', 'Codenames=rank', 'Terraforming Mars=rank', 'Gloomhaven=rank'];
+
+          var symbols = plot.append("g")
+              .attr("id", "symbols-c-2")
+
+          var circles = symbols.selectAll("dot")
+              .data(slices)
+              .enter()
+              .append("g")
+              .filter(function (d) {
+                  const colname = d.id;
+                  return colname === 'Catan=count' || colname === 'Codenames=count' || colname === 'Terraforming Mars=count' || colname === 'Gloomhaven=count';
+              });
+
+              // Append circles to the data points
+              circles.selectAll("circle")
+                  .data(function (d) {
+                      // Filter and extract data points every 3 months
+                      var dataPoints = d.values.filter(function (value) {
+                          // Modify based on x-axis tick interval
+                          return value.date >= new Date(2017, 0, 1) && value.date.getMonth() % 3 === 0;
+                      });
+                      return dataPoints;
+                  })
+                  .enter()
+                  .append("circle")
+                  .attr("cx", function (d) { return xScale(d.date); })
+                  .attr("cy", function (d) { return yScale(d.measurement);} )
+                  .attr("r", 8) // Adjust the radius as needed
+                  .style("fill", function (d, i) {
+                      return color(labels[i]);
+                  });
+
+
+          //   Adding Legend
+          var legend = svg_c2.append("g")
+                .attr("id", "legend_c-2")
+                .attr("transform", "translate(" + (width + 90) + "," + (height - 20) + ")");
+          legend.append("circle")
+                  .attr("r", 15)
+                  .style("fill", "black")
+          legend.append("text")
+                  .attr("x", 0)
+                  .attr("y", 4)
+                  .style("fill", "white")
+                  .style("text-anchor", "middle")
+                  .style("font-size", "12px")
+                  .text("rank");
+          legend.append("text")
+                  .attr("x", 0)
+                  .attr("y", 30)
+                  .style("fill", "black")
+                  .style("font-size", "16px")
+                  .style("text-anchor", "middle")
+                  .text("BoardGameGeek Rank");
+
+      });
+
+      // <div id='nchi7'></div>
+      </script>
+
+<div id="signature">nchi7</div>
+
+</body>
+</html>
