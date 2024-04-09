@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+
+<head>
+  <title>Games Rating: 2015 - 2019</title>
+  <meta charset="utf-8">
+  <style>
+    <!-- define CSS rules -->
+  </style>
+</head>
+
+<body>
+  <script type="text/javascript" src="../lib/d3.v5.min.js"></script>
+  <script type="text/javascript" src="../lib/d3-dsv.min.js"></script>
+
+  <!-- Example hiding an element -->
+  <!-- <g id="" style"display:none;" /> -->
+
+  <!-- Example of styling an element -->
+  <!-- svg_element.style()-->
+
+  <script>
+    // define the dimensions and margins for the line chart
+    // Use the Margin Convention referenced in the HW document to layout your graph
+    var margin = {
+          top: 50,
+          right: 200,
+          bottom: 50,
+          left: 100
+      };
+
+    var width = 960; // Use the window's width
+    var height = 500; // Use the window's height
+    var bar_padding = 3;
+
+    // append svg element to the body of the page
+    // set dimensions and position of the svg element
+    let svg = d3
+            .select("body")
+            .append("svg")
+            .attr("id", "line_chart")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    // Fetch the data
+	var pathToCsv = "average-rating.csv";
+
+    var q4_data = [];
+
+    d3.dsv(",", pathToCsv, function (d) {
+            // format data attributes if required
+            d.name = d.name;
+            d.year = +d.year;
+            d.average_rating = Math.floor(d.average_rating);
+            d.users_rated = +d.users_rated;
+
+            // Push each row of data into the q4_data array
+            if (d.year >= 2015 && d.year <= 2019) {
+              q4_data.push(d);
+            }
+
+    }).then(function (data) {
+        console.log(q4_data); // you should see the data in your browser's developer tools console
+
+        // Count occurrences of "name" by "year"
+        var ratingCounts = {};
+
+        q4_data.forEach(function (d) {
+            if (!ratingCounts[d.year]) {
+                ratingCounts[d.year] = new Array(10).fill(0);
+            }
+
+            ratingCounts[d.year][d.average_rating] += 1;
+        });
+
+        console.log(ratingCounts);
+
+        /* Create line plot using data from csv */
+        var year_group = ["2015", "2016", "2017", "2018", "2019"]
+        // A color scale: one color for each group
+        var color = d3.scaleOrdinal()
+                .domain(year_group)
+                .range(d3.schemeSet2);
+
+        // x axis: Ratings, y axis: count of boardgames
+        // Sort q4_data by average_rating in descending order
+        q4_data.sort(function (a, b) {
+            return b.average_rating - a.average_rating;
+        });
+        // Get the maximum rating
+        var max_rating = q4_data[0].average_rating;
+
+
+        var xScale = d3.scaleLinear()
+                        .domain([0, max_rating])
+                        .range([0, width]);
+        var yScale = d3.scaleLinear()
+                        .domain([0, 550])
+                        .range([height, 0]);
+
+        // Define x & y axis
+        var xAxis = d3.axisBottom().scale(xScale);
+        var yAxis = d3.axisLeft()
+                .tickValues(d3.range(0, 550, 50))
+                .scale(yScale);
+
+
+        // Drawing
+        var container = svg.append("g")
+              .attr("id", "container")
+
+        //  add line
+        var line = d3.line()
+                .x(function (d,i) { return xScale(i); })
+                .y(function (d) { return yScale(d); });
+
+        var lines = container.append("g")
+                .attr("id", "lines")
+
+        for (var year in ratingCounts) {
+            lines.append("path")
+                    .datum(ratingCounts[year])
+                    .attr("fill", "none")
+                    .attr("stroke", function (d, i) {
+                      return color(year);
+                    })
+                    .attr("stroke-width", 2)
+                    .attr("d", line);
+        }
+
+        container.append("g")
+              .attr("id", "x-axis-lines")
+              .attr("transform", "translate(0," + height + ")")
+              .call(xAxis);
+
+        container.append("g")
+              .attr("id", "y-axis-lines")
+              .call(yAxis);
+
+
+        // Add circles (dots) for each data point
+        var circles = container.append("g")
+                .attr("id", "circles")
+
+        for (var year in ratingCounts) {
+            circles.selectAll(".dot" + year)
+                .data(ratingCounts[year])
+                .enter().append("circle")
+                .attr("cx", function (d, i) { return xScale(i); })
+                .attr("cy", function (d) { return yScale(d); })
+                .attr("r", 4) // Radius of the circles
+                .style("fill", function(d,i){ return color(year);});
+        }
+
+        container.append("text")
+              .attr("id", "line_chart_title")
+              .attr("x", (width / 2))
+              .attr("y", margin.top / 10)
+              .attr("text-anchor", "middle")
+              .style("font-size", "24px")
+              .text("Board games by Rating 2015-2019");
+
+        container.append("text")
+              .attr("id", "credit")
+              .attr("x", (width / 2))
+              .attr("y", margin.top / 2)
+              .attr("text-anchor", "middle")
+              .style("font-size", "16px")
+              .text("nchi7");
+
+        //   Adding Legend
+        var legend = container.append("g")
+                .attr("id", "legend")
+                .attr("transform", "translate(" + (width - 120) + "," + (height - 550) + ")");
+
+        legend.selectAll("dots")
+                .data(year_group)
+                .enter()
+                .append("circle")
+                    .attr("cx", 100)
+                    .attr("cy", function(d,i){ return 100 + i*20})
+                    .attr("r", 6)
+                    .style("fill", function(d,i){ return color(year_group[i]);})
+
+        legend.selectAll("labels")
+                .data(year_group)
+                .enter()
+                .append("text")
+                    .attr("x", 120)
+                    .attr("y", function(d,i){ return 100 + i*20})
+                    .style("fill",  function(d,i){ return color(year_group[i]);})
+                    .text(function(d){ return d})
+                    .style("text-anchor", "right")
+                    .style("font-size", "16px")
+
+        container.append("text")
+              .attr("x", (width / 2))
+              .attr("y", height + 40)
+              .style("text-anchor", "middle")
+              .style("font-size", "18px")
+              .text("Ratings");
+
+
+        container.append("text")
+              // .attr("id", "y-axis label")
+              .attr("transform", "rotate(-90)")
+              .attr("y", -50)
+              .attr("x", -height / 2)
+              .style("text-anchor", "middle")
+              .style("font-size", "18px")
+              .text("Count");
+    });
+
+// <div id="bar_chart_title">Top 5 Most Rated Games of 2019 with Rating 6</div>
+
+
+  // set dimensions and position of the svg element
+    var widthB = 700; // Use the window's width
+    var heightB = 400; // Use the window's height
+
+
+    let svg2 = d3
+            .select("body")
+            .append("svg")
+            .attr("id", "bar_chart")
+            .attr("width", widthB + margin.left + margin.right)
+            .attr("height", heightB + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform", "translate(" + margin.left*2.5 + "," + margin.top *1.2 + ")");
+
+        // Fetch the data
+	var pathToCsv = "average-rating.csv";
+
+    var q4_data = [];
+
+    d3.dsv(",", pathToCsv, function (d) {
+            // format data attributes if required
+            d.name = d.name;
+            d.year = +d.year;
+            d.average_rating = Math.floor(d.average_rating);
+            d.users_rated = +d.users_rated;
+
+            // Push each row of data into the q4_data array
+            if (d.year >= 2015 && d.year <= 2019) {
+              q4_data.push(d);
+    }
+
+    }).then(function (data) {
+        console.log(data); // you should see the data in your browser's developer tools console
+        console.log(q4_data);
+
+
+        // Count occurrences of "name" by "year"
+        var ratingCounts = {};
+
+        q4_data.forEach(function (d) {
+            if (!ratingCounts[d.year]) {
+                ratingCounts[d.year] = new Array(10).fill(0);
+            }
+
+            ratingCounts[d.year][d.average_rating] += 1;
+        });
+
+        console.log(ratingCounts);
+
+        /* Create line plot using data from csv */
+        var year_group = ["2015", "2016", "2017", "2018", "2019"]
+        // A color scale: one color for each group
+        var color = d3.scaleOrdinal()
+                .domain(year_group)
+                .range(d3.schemeSet2);
+
+        // x axis: Ratings, y axis: count of boardgames
+        // Sort q4_data by average_rating in descending order
+        q4_data.sort(function (a, b) {
+            return b.average_rating - a.average_rating;
+        });
+        // Get the maximum rating
+        var max_rating = q4_data[0].average_rating;
+
+
+        var xScale2 = d3.scaleLinear()
+                        .domain([0, 400])
+                        .range([0, widthB]);
+        var yScale2 = d3.scaleBand()
+                        .domain(['LAMA', 'Victorian', 'Blood on t', 'Unlock! Ni', 'Corinth'])
+                        .range([heightB, 0]);
+
+        // Define x & y axis
+        var xAxis2 = d3.axisBottom().scale(xScale2).tickValues(d3.range(0, 400, 50));
+        var yAxis2 = d3.axisLeft().scale(yScale2);
+
+
+        // Drawing
+        var container2 = svg2.append("g")
+              .attr("id", "container_2")
+
+        container2.append("g")
+              .attr("id", "x-axis-bars")
+              .attr("transform", "translate(0," + heightB + ")")
+              .call(xAxis2);
+
+        container2.append("g")
+              .attr("id", "y-axis-bars")
+              .call(yAxis2);
+
+
+        container2.append("text")
+              .attr("id", "bar_x_axis_label")
+              .attr("x", (widthB / 2))
+              .attr("y", heightB + 40)
+              .style("text-anchor", "middle")
+              .style("font-size", "18px")
+              .text("Number of users");
+
+
+        container2.append("text")
+              .attr("id", "bar_y_axis_label")
+              .attr("transform", "rotate(-90)")
+              .attr("y", -100)
+              .attr("x", -heightB / 2)
+              .style("text-anchor", "middle")
+              .style("font-size", "18px")
+              .text("Games");
+
+
+    }).catch(function (error) {
+      console.log(error);
+    });
+
+
+  </script>
+
+</body>
